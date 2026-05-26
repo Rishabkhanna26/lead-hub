@@ -608,6 +608,24 @@ body {
   background: var(--gray-50);
 }
 
+.leads-table tbody tr.selected-row,
+.payments-table tbody tr.selected-row,
+.meetings-table tbody tr.selected-row {
+  background: rgba(99, 102, 241, 0.05);
+}
+
+.checkbox-cell {
+  width: 40px;
+  text-align: center;
+}
+
+.checkbox-cell input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+  accent-color: var(--primary);
+}
+
 .name-cell {
   display: flex;
   flex-direction: column;

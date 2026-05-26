@@ -26,6 +26,9 @@ const LeadManagementDashboard = () => {
 
   const [payments, setPayments] = useState([]);
   const [meetings, setMeetings] = useState([]);
+  const [selectedLeads, setSelectedLeads] = useState([]);
+  const [selectedPayments, setSelectedPayments] = useState([]);
+  const [selectedMeetings, setSelectedMeetings] = useState([]);
   const [showLeadModal, setShowLeadModal] = useState(false);
   const [editingLead, setEditingLead] = useState(null);
   const [formData, setFormData] = useState({
@@ -322,6 +325,60 @@ const LeadManagementDashboard = () => {
     }
   };
 
+  const handleSelectLead = (id) => {
+    setSelectedLeads(prev => prev.includes(id) ? prev.filter(lId => lId !== id) : [...prev, id]);
+  };
+  const handleSelectAllLeads = (e) => {
+    if (e.target.checked) setSelectedLeads(leads.map(l => l._id));
+    else setSelectedLeads([]);
+  };
+  const handleBulkDeleteLeads = async () => {
+    if (!confirm(`Are you sure you want to delete ${selectedLeads.length} leads?`)) return;
+    try {
+      await Promise.all(selectedLeads.map(id => fetch(`/api/leads/${id}`, { method: 'DELETE' })));
+      setLeads(leads.filter(l => !selectedLeads.includes(l._id)));
+      setSelectedLeads([]);
+    } catch (error) {
+      console.error('Error bulk deleting leads:', error);
+    }
+  };
+
+  const handleSelectPayment = (id) => {
+    setSelectedPayments(prev => prev.includes(id) ? prev.filter(pId => pId !== id) : [...prev, id]);
+  };
+  const handleSelectAllPayments = (e) => {
+    if (e.target.checked) setSelectedPayments(payments.map(p => p._id));
+    else setSelectedPayments([]);
+  };
+  const handleBulkDeletePayments = async () => {
+    if (!confirm(`Are you sure you want to delete ${selectedPayments.length} payments?`)) return;
+    try {
+      await Promise.all(selectedPayments.map(id => fetch(`/api/payments/${id}`, { method: 'DELETE' })));
+      setPayments(payments.filter(p => !selectedPayments.includes(p._id)));
+      setSelectedPayments([]);
+    } catch (error) {
+      console.error('Error bulk deleting payments:', error);
+    }
+  };
+
+  const handleSelectMeeting = (id) => {
+    setSelectedMeetings(prev => prev.includes(id) ? prev.filter(mId => mId !== id) : [...prev, id]);
+  };
+  const handleSelectAllMeetings = (e) => {
+    if (e.target.checked) setSelectedMeetings(meetings.map(m => m._id));
+    else setSelectedMeetings([]);
+  };
+  const handleBulkDeleteMeetings = async () => {
+    if (!confirm(`Are you sure you want to delete ${selectedMeetings.length} meetings?`)) return;
+    try {
+      await Promise.all(selectedMeetings.map(id => fetch(`/api/meetings/${id}`, { method: 'DELETE' })));
+      setMeetings(meetings.filter(m => !selectedMeetings.includes(m._id)));
+      setSelectedMeetings([]);
+    } catch (error) {
+      console.error('Error bulk deleting meetings:', error);
+    }
+  };
+
   const stats = {
     totalLeads: leads.length,
     newThisWeek: leads.filter((l) => l.status === 'New').length,
@@ -550,6 +607,11 @@ const LeadManagementDashboard = () => {
               <div className="section-toolbar">
                 <h2>All Leads</h2>
                 <div className="toolbar-actions">
+                  {selectedLeads.length > 0 && (
+                    <button className="action-btn delete" onClick={handleBulkDeleteLeads} style={{ display: 'flex', gap: '0.5rem', background: '#fee2e2', borderColor: '#ef4444', color: '#ef4444', padding: '0.5rem 1rem' }}>
+                      <Trash2 size={16} /> Delete Selected ({selectedLeads.length})
+                    </button>
+                  )}
                   <button className="filter-btn">
                     <Filter size={18} />
                     Filter
@@ -561,6 +623,9 @@ const LeadManagementDashboard = () => {
                 <table className="leads-table">
                   <thead>
                     <tr>
+                      <th className="checkbox-cell" style={{ width: '40px' }}>
+                        <input type="checkbox" onChange={handleSelectAllLeads} checked={leads.length > 0 && selectedLeads.length === leads.length} />
+                      </th>
                       <th>Name / Company</th>
                       <th>Contact</th>
                       <th>Requirement</th>
@@ -574,7 +639,10 @@ const LeadManagementDashboard = () => {
                   </thead>
                   <tbody>
                     {leads.map((lead) => (
-                      <tr key={lead._id}>
+                      <tr key={lead._id} className={selectedLeads.includes(lead._id) ? 'selected-row' : ''}>
+                        <td className="checkbox-cell" data-label="Select">
+                          <input type="checkbox" checked={selectedLeads.includes(lead._id)} onChange={() => handleSelectLead(lead._id)} />
+                        </td>
                         <td data-label="Name / Company">
                           <div className="name-cell">
                             <strong>{lead.name}</strong>
@@ -634,6 +702,11 @@ const LeadManagementDashboard = () => {
               <div className="section-toolbar">
                 <h2>Payments</h2>
                 <div className="toolbar-actions">
+                  {selectedPayments.length > 0 && (
+                    <button className="action-btn delete" onClick={handleBulkDeletePayments} style={{ display: 'flex', gap: '0.5rem', background: '#fee2e2', borderColor: '#ef4444', color: '#ef4444', padding: '0.5rem 1rem' }}>
+                      <Trash2 size={16} /> Delete Selected ({selectedPayments.length})
+                    </button>
+                  )}
                   <button className="filter-btn">
                     <Filter size={18} />
                     Filter
@@ -645,6 +718,9 @@ const LeadManagementDashboard = () => {
                 <table className="payments-table">
                   <thead>
                     <tr>
+                      <th className="checkbox-cell" style={{ width: '40px' }}>
+                        <input type="checkbox" onChange={handleSelectAllPayments} checked={payments.length > 0 && selectedPayments.length === payments.length} />
+                      </th>
                       <th>Client</th>
                       <th>Amount</th>
                       <th>Date</th>
@@ -665,7 +741,10 @@ const LeadManagementDashboard = () => {
                       </tr>
                     )}
                     {payments.map((payment) => (
-                      <tr key={payment._id}>
+                      <tr key={payment._id} className={selectedPayments.includes(payment._id) ? 'selected-row' : ''}>
+                        <td className="checkbox-cell" data-label="Select">
+                          <input type="checkbox" checked={selectedPayments.includes(payment._id)} onChange={() => handleSelectPayment(payment._id)} />
+                        </td>
                         <td data-label="Client">{payment.client}</td>
                         <td data-label="Amount">₹{payment.amount.toLocaleString()}</td>
                         <td data-label="Date">{new Date(payment.date).toLocaleDateString()}</td>
@@ -708,6 +787,11 @@ const LeadManagementDashboard = () => {
               <div className="section-toolbar">
                 <h2>Meetings</h2>
                 <div className="toolbar-actions">
+                  {selectedMeetings.length > 0 && (
+                    <button className="action-btn delete" onClick={handleBulkDeleteMeetings} style={{ display: 'flex', gap: '0.5rem', background: '#fee2e2', borderColor: '#ef4444', color: '#ef4444', padding: '0.5rem 1rem' }}>
+                      <Trash2 size={16} /> Delete Selected ({selectedMeetings.length})
+                    </button>
+                  )}
                   <button className="filter-btn">
                     <Filter size={18} />
                     Filter
@@ -719,6 +803,9 @@ const LeadManagementDashboard = () => {
                 <table className="meetings-table">
                   <thead>
                     <tr>
+                      <th className="checkbox-cell" style={{ width: '40px' }}>
+                        <input type="checkbox" onChange={handleSelectAllMeetings} checked={meetings.length > 0 && selectedMeetings.length === meetings.length} />
+                      </th>
                       <th>Meeting Name</th>
                       <th>Date & Time</th>
                       <th>Contact Number</th>
@@ -736,7 +823,10 @@ const LeadManagementDashboard = () => {
                       </tr>
                     )}
                     {meetings.map((meeting) => (
-                      <tr key={meeting._id}>
+                      <tr key={meeting._id} className={selectedMeetings.includes(meeting._id) ? 'selected-row' : ''}>
+                        <td className="checkbox-cell" data-label="Select">
+                          <input type="checkbox" checked={selectedMeetings.includes(meeting._id)} onChange={() => handleSelectMeeting(meeting._id)} />
+                        </td>
                         <td data-label="Meeting Name">{meeting.name}</td>
                         <td data-label="Date & Time">{new Date(meeting.dateTime).toLocaleString()}</td>
                         <td data-label="Contact Number">{meeting.contactNumber || '—'}</td>
