@@ -13,7 +13,7 @@ export async function GET(request) {
   } catch (error) {
     console.error('Error fetching leads:', error);
     return NextResponse.json(
-      { error: 'Failed to fetch leads' },
+      { error: 'Failed to fetch leads', details: error.message },
       { status: 500 }
     );
   }

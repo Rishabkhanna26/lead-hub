@@ -8,8 +8,9 @@ export async function GET(request) {
     const meetings = await Meeting.find({}).sort({ dateTime: -1 });
     return NextResponse.json(meetings, { status: 200 });
   } catch (error) {
+    console.error('Error fetching meetings:', error);
     return NextResponse.json(
-      { error: 'Failed to fetch meetings' },
+      { error: 'Failed to fetch meetings', details: error.message },
       { status: 500 }
     );
   }

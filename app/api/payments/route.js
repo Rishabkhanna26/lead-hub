@@ -8,8 +8,9 @@ export async function GET(request) {
     const payments = await Payment.find({}).sort({ date: -1 });
     return NextResponse.json(payments, { status: 200 });
   } catch (error) {
+    console.error('Error fetching payments:', error);
     return NextResponse.json(
-      { error: 'Failed to fetch payments' },
+      { error: 'Failed to fetch payments', details: error.message },
       { status: 500 }
     );
   }

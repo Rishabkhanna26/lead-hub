@@ -82,9 +82,12 @@ const LeadManagementDashboard = () => {
       if (res.ok) {
         const data = await res.json();
         setLeads(data);
+      } else {
+        const errData = await res.json();
+        console.error('API Error (Leads):', errData);
       }
     } catch (error) {
-      console.error('Error fetching leads:', error);
+      console.error('Network Error fetching leads:', error);
     }
   };
 
@@ -94,9 +97,12 @@ const LeadManagementDashboard = () => {
       if (res.ok) {
         const data = await res.json();
         setPayments(data);
+      } else {
+        const errData = await res.json();
+        console.error('API Error (Payments):', errData);
       }
     } catch (error) {
-      console.error('Error fetching payments:', error);
+      console.error('Network Error fetching payments:', error);
     }
   };
 
@@ -106,9 +112,12 @@ const LeadManagementDashboard = () => {
       if (res.ok) {
         const data = await res.json();
         setMeetings(data);
+      } else {
+        const errData = await res.json();
+        console.error('API Error (Meetings):', errData);
       }
     } catch (error) {
-      console.error('Error fetching meetings:', error);
+      console.error('Network Error fetching meetings:', error);
     }
   };
 
