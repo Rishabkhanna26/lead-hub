@@ -1199,15 +1199,42 @@ const LeadManagementDashboard = () => {
                     onChange={(e) => setMeetingFormData({ ...meetingFormData, contactNumber: e.target.value })}
                   />
                 </div>
-                <div className="form-group">
-                  <label htmlFor="participants">Participants</label>
-                  <input
-                    type="text"
-                    id="participants"
-                    value={meetingFormData.participants}
-                    onChange={(e) => setMeetingFormData({ ...meetingFormData, participants: e.target.value })}
-                    placeholder="e.g. John, Jane"
-                  />
+                <div className="form-group full-width">
+                  <label>Participants</label>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginTop: '0.5rem' }}>
+                    {teamMembers.map((member) => {
+                      const selectedParticipants = meetingFormData.participants ? meetingFormData.participants.split(',').map(s => s.trim()).filter(Boolean) : [];
+                      const isSelected = selectedParticipants.includes(member);
+                      return (
+                        <button
+                          key={member}
+                          type="button"
+                          onClick={() => {
+                            if (isSelected) {
+                              setMeetingFormData({ ...meetingFormData, participants: selectedParticipants.filter(p => p !== member).join(', ') });
+                            } else {
+                              setMeetingFormData({ ...meetingFormData, participants: [...selectedParticipants, member].join(', ') });
+                            }
+                          }}
+                          style={{
+                            padding: '0.4rem 1rem',
+                            borderRadius: '2rem',
+                            border: `1px solid ${isSelected ? 'var(--primary)' : 'var(--border-color)'}`,
+                            backgroundColor: isSelected ? 'var(--primary)' : 'transparent',
+                            color: isSelected ? '#ffffff' : 'var(--text-color)',
+                            cursor: 'pointer',
+                            fontSize: '0.875rem',
+                            transition: 'all 0.2s ease',
+                            display: 'flex',
+                            alignItems: 'center'
+                          }}
+                        >
+                          {member}
+                          {isSelected && <X size={14} style={{ marginLeft: '6px' }} />}
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
                 <div className="form-group">
                   <label htmlFor="meetingStatus">Status</label>
