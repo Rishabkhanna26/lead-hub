@@ -17,6 +17,7 @@ import {
   Edit2,
   Bell,
   Menu,
+  Wallet,
 } from 'lucide-react';
 import './styles.css';
 
@@ -26,9 +27,11 @@ const LeadManagementDashboard = () => {
 
   const [payments, setPayments] = useState([]);
   const [meetings, setMeetings] = useState([]);
+  const [commissions, setCommissions] = useState([]);
   const [selectedLeads, setSelectedLeads] = useState([]);
   const [selectedPayments, setSelectedPayments] = useState([]);
   const [selectedMeetings, setSelectedMeetings] = useState([]);
+  const [selectedCommissions, setSelectedCommissions] = useState([]);
   const [showLeadModal, setShowLeadModal] = useState(false);
   const [editingLead, setEditingLead] = useState(null);
   const [formData, setFormData] = useState({
@@ -68,12 +71,24 @@ const LeadManagementDashboard = () => {
     status: 'Scheduled',
   });
 
+  const [showCommissionModal, setShowCommissionModal] = useState(false);
+  const [editingCommission, setEditingCommission] = useState(null);
+  const [commissionFormData, setCommissionFormData] = useState({
+    client: '',
+    totalAmount: '',
+    acquirers: [{ member: '', amount: '' }],
+    workers: [{ member: '', amount: '' }],
+    date: '',
+    notes: '',
+  });
+
   const teamMembers = ['Rishabh', 'Anas', 'Prashil', 'Rohit', 'Harsh', 'Ganesh'];
 
   useEffect(() => {
     fetchLeads();
     fetchPayments();
     fetchMeetings();
+    fetchCommissions();
   }, []);
 
   const fetchLeads = async () => {
@@ -118,6 +133,20 @@ const LeadManagementDashboard = () => {
       }
     } catch (error) {
       console.error('Network Error fetching meetings:', error);
+    }
+  };
+
+  const fetchCommissions = async () => {
+    try {
+      const res = await fetch('/api/commissions');
+      if (res.ok) {
+        const data = await res.json();
+        setCommissions(data);
+      } else {
+        console.error('API Error (Commissions)');
+      }
+    } catch (error) {
+      console.error('Network Error fetching commissions:', error);
     }
   };
 
@@ -388,6 +417,154 @@ const LeadManagementDashboard = () => {
     }
   };
 
+  const addAcquirer = () => {
+    setCommissionFormData({ ...commissionFormData, acquirers: [...commissionFormData.acquirers, { member: '', amount: '' }] });
+  };
+  const removeAcquirer = (index) => {
+    const newAcquirers = commissionFormData.acquirers.filter((_, i) => i !== index);
+    setCommissionFormData({ ...commissionFormData, acquirers: newAcquirers });
+  };
+  const updateAcquirer = (index, field, value) => {
+    const newAcquirers = [...commissionFormData.acquirers];
+    newAcquirers[index][field] = value;
+    setCommissionFormData({ ...commissionFormData, acquirers: newAcquirers });
+  };
+
+  const addWorker = () => {
+    setCommissionFormData({ ...commissionFormData, workers: [...commissionFormData.workers, { member: '', amount: '' }] });
+  };
+  const removeWorker = (index) => {
+    const newWorkers = commissionFormData.workers.filter((_, i) => i !== index);
+    setCommissionFormData({ ...commissionFormData, workers: newWorkers });
+  };
+  const updateWorker = (index, field, value) => {
+    const newWorkers = [...commissionFormData.workers];
+    newWorkers[index][field] = value;
+    setCommissionFormData({ ...commissionFormData, workers: newWorkers });
+  };
+
+  const handleAddCommission = () => {
+    setEditingCommission(null);
+    setCommissionFormData({
+      client: '',
+      totalAmount: '',
+      acquirers: [{ member: '', amount: '' }],
+      workers: [{ member: '', amount: '' }],
+      date: new Date().toISOString().split('T')[0],
+      notes: '',
+    });
+    setShowCommissionModal(true);
+  };
+
+  const handleEditCommission = (commission) => {
+    setEditingCommission(commission);
+    setCommissionFormData({
+      ...commission,
+      acquirers: commission.acquirers?.length ? commission.acquirers : [{ member: '', amount: '' }],
+      workers: commission.workers?.length ? commission.workers : [{ member: '', amount: '' }],
+      date: commission.date ? new Date(commission.date).toISOString().split('T')[0] : '',
+    });
+    setShowCommissionModal(true);
+  };
+
+  const handleSubmitCommission = async (e) => {
+    e.preventDefault();
+
+    // Validation
+    const totalAmount = parseFloat(commissionFormData.totalAmount) || 0;
+    
+    let totalCuts = 0;
+    for (let acq of commissionFormData.acquirers) {
+      if (!acq.member || !acq.amount) {
+        alert("Please ensure all Acquirers have a member and an amount.");
+        return;
+      }
+      totalCuts += parseFloat(acq.amount) || 0;
+    }
+    for (let worker of commissionFormData.workers) {
+      if (!worker.member || !worker.amount) {
+        alert("Please ensure all Workers have a member and an amount.");
+        return;
+      }
+      totalCuts += parseFloat(worker.amount) || 0;
+    }
+
+    if (totalCuts > totalAmount) {
+      alert(`Validation Error: The total cuts (₹${totalCuts}) exceed the Total Client Payment (₹${totalAmount}).`);
+      return;
+    }
+
+    if (editingCommission) {
+      try {
+        const res = await fetch(`/api/commissions/${editingCommission._id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(commissionFormData),
+        });
+        if (res.ok) {
+          const updated = await res.json();
+          setCommissions(commissions.map((c) => (c._id === editingCommission._id ? updated : c)));
+          setShowCommissionModal(false);
+        } else {
+          const errData = await res.json();
+          alert(`Failed to update split: ${errData.error}`);
+        }
+      } catch (error) {
+        console.error('Error updating commission:', error);
+        alert('Network error updating split.');
+      }
+    } else {
+      try {
+        const res = await fetch('/api/commissions', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(commissionFormData),
+        });
+        if (res.ok) {
+          const newComm = await res.json();
+          setCommissions([newComm, ...commissions]);
+          setShowCommissionModal(false);
+        } else {
+          const errData = await res.json();
+          alert(`Failed to create split: ${errData.error}`);
+        }
+      } catch (error) {
+        console.error('Error creating commission:', error);
+        alert('Network error creating split.');
+      }
+    }
+  };
+
+  const handleDeleteCommission = async (id) => {
+    if (!confirm('Are you sure you want to delete this record?')) return;
+    try {
+      const res = await fetch(`/api/commissions/${id}`, { method: 'DELETE' });
+      if (res.ok) {
+        setCommissions(commissions.filter((c) => c._id !== id));
+      }
+    } catch (error) {
+      console.error('Error deleting commission:', error);
+    }
+  };
+
+  const handleSelectCommission = (id) => {
+    setSelectedCommissions(prev => prev.includes(id) ? prev.filter(cId => cId !== id) : [...prev, id]);
+  };
+  const handleSelectAllCommissions = (e) => {
+    if (e.target.checked) setSelectedCommissions(commissions.map(c => c._id));
+    else setSelectedCommissions([]);
+  };
+  const handleBulkDeleteCommissions = async () => {
+    if (!confirm(`Are you sure you want to delete ${selectedCommissions.length} records?`)) return;
+    try {
+      await Promise.all(selectedCommissions.map(id => fetch(`/api/commissions/${id}`, { method: 'DELETE' })));
+      setCommissions(commissions.filter(c => !selectedCommissions.includes(c._id)));
+      setSelectedCommissions([]);
+    } catch (error) {
+      console.error('Error bulk deleting commissions:', error);
+    }
+  };
+
   const stats = {
     totalLeads: leads.length,
     newThisWeek: leads.filter((l) => l.status === 'New').length,
@@ -429,6 +606,11 @@ const LeadManagementDashboard = () => {
               <button className="add-lead-btn" onClick={handleAddMeeting}>
                 <Plus size={20} />
                 Add Meeting
+              </button>
+            ) : activeTab === 'commissions' ? (
+              <button className="add-lead-btn" onClick={handleAddCommission}>
+                <Plus size={20} />
+                Add Split
               </button>
             ) : (
               <button className="add-lead-btn" onClick={handleAddLead}>
@@ -476,6 +658,13 @@ const LeadManagementDashboard = () => {
           >
             <Calendar size={20} />
             Meetings
+          </button>
+          <button
+            className={`nav-item ${activeTab === 'commissions' ? 'active' : ''}`}
+            onClick={() => setActiveTab('commissions')}
+          >
+            <Wallet size={20} />
+            Splits
           </button>
         </nav>
 
@@ -855,6 +1044,103 @@ const LeadManagementDashboard = () => {
                             <button
                               className="action-btn delete"
                               onClick={() => handleDeleteMeeting(meeting._id)}
+                              title="Delete"
+                            >
+                              <Trash2 size={16} />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {/* Commissions Tab */}
+          {activeTab === 'commissions' && (
+            <div className="meetings-section">
+              <div className="section-toolbar">
+                <h2>Revenue Splits</h2>
+                <div className="toolbar-actions">
+                  {selectedCommissions.length > 0 && (
+                    <button className="action-btn delete" onClick={handleBulkDeleteCommissions} style={{ display: 'flex', gap: '0.5rem', background: '#fee2e2', borderColor: '#ef4444', color: '#ef4444', padding: '0.5rem 1rem' }}>
+                      <Trash2 size={16} /> Delete Selected ({selectedCommissions.length})
+                    </button>
+                  )}
+                  <button className="filter-btn">
+                    <Filter size={18} />
+                    Filter
+                  </button>
+                </div>
+              </div>
+
+              <div className="table-container">
+                <table className="meetings-table">
+                  <thead>
+                    <tr>
+                      <th className="checkbox-cell" style={{ width: '40px' }}>
+                        <input type="checkbox" onChange={handleSelectAllCommissions} checked={commissions.length > 0 && selectedCommissions.length === commissions.length} />
+                      </th>
+                      <th>Client</th>
+                      <th>Total Amount</th>
+                      <th>Acquirer (Cut)</th>
+                      <th>Worker (Cut)</th>
+                      <th>Date</th>
+                      <th>Notes</th>
+                      <th>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {commissions.length === 0 && (
+                      <tr>
+                        <td colSpan="8" className="empty-cell">
+                          <p>No splits recorded yet.</p>
+                        </td>
+                      </tr>
+                    )}
+                    {commissions.map((comm) => (
+                      <tr key={comm._id} className={selectedCommissions.includes(comm._id) ? 'selected-row' : ''}>
+                        <td className="checkbox-cell" data-label="Select">
+                          <input type="checkbox" checked={selectedCommissions.includes(comm._id)} onChange={() => handleSelectCommission(comm._id)} />
+                        </td>
+                        <td data-label="Client">{comm.client}</td>
+                        <td data-label="Total Amount"><strong>₹{comm.totalAmount?.toLocaleString()}</strong></td>
+                        <td data-label="Acquirers">
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                            {comm.acquirers?.map((a, i) => (
+                              <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                                <span className="status-badge" style={{ background: 'var(--gray-100)', color: 'var(--text-primary)' }}>{a.member}</span>
+                                <span style={{ fontSize: '0.8rem', color: 'var(--success)', fontWeight: 'bold' }}>+₹{a.amount?.toLocaleString()}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </td>
+                        <td data-label="Workers">
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                            {comm.workers?.map((w, i) => (
+                              <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                                <span className="status-badge" style={{ background: 'var(--gray-100)', color: 'var(--text-primary)' }}>{w.member}</span>
+                                <span style={{ fontSize: '0.8rem', color: 'var(--success)', fontWeight: 'bold' }}>+₹{w.amount?.toLocaleString()}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </td>
+                        <td data-label="Date">{new Date(comm.date).toLocaleDateString()}</td>
+                        <td data-label="Notes">{comm.notes || '—'}</td>
+                        <td data-label="Actions">
+                          <div className="action-buttons">
+                            <button
+                              className="action-btn edit"
+                              onClick={() => handleEditCommission(comm)}
+                              title="Edit"
+                            >
+                              <Edit2 size={16} />
+                            </button>
+                            <button
+                              className="action-btn delete"
+                              onClick={() => handleDeleteCommission(comm._id)}
                               title="Delete"
                             >
                               <Trash2 size={16} />
@@ -1252,6 +1538,148 @@ const LeadManagementDashboard = () => {
               <div className="form-actions">
                 <button type="button" className="cancel-btn" onClick={() => setShowMeetingModal(false)}>Cancel</button>
                 <button type="submit" className="submit-btn">{editingMeeting ? 'Update Meeting' : 'Save Meeting'}</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Commission Modal */}
+      {showCommissionModal && (
+        <div className="modal-overlay" onClick={() => setShowCommissionModal(false)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2>{editingCommission ? 'Edit Split' : 'New Split'}</h2>
+              <button className="close-btn" onClick={() => setShowCommissionModal(false)}>
+                <X size={24} />
+              </button>
+            </div>
+            <form onSubmit={handleSubmitCommission} className="lead-form">
+              <div className="form-grid">
+                <div className="form-group">
+                  <label htmlFor="commClient">Client Name <span className="required">*</span></label>
+                  <select
+                    id="commClient"
+                    value={commissionFormData.client}
+                    onChange={(e) => setCommissionFormData({ ...commissionFormData, client: e.target.value })}
+                    required
+                  >
+                    <option value="" disabled>Select a Client</option>
+                    {leads
+                      .filter((lead) => lead.status !== 'Won')
+                      .map((lead) => (
+                        <option key={lead._id} value={lead.name}>
+                          {lead.name} {lead.company ? `(${lead.company})` : ''}
+                        </option>
+                      ))}
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label htmlFor="commTotalAmount">Total Client Payment (₹) <span className="required">*</span></label>
+                  <input
+                    type="number"
+                    id="commTotalAmount"
+                    value={commissionFormData.totalAmount}
+                    onChange={(e) => setCommissionFormData({ ...commissionFormData, totalAmount: e.target.value })}
+                    required
+                  />
+                </div>
+                <div className="form-group full-width">
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                    <label>Acquirers <span className="required">*</span></label>
+                    <button type="button" onClick={addAcquirer} style={{ display: 'flex', alignItems: 'center', gap: '0.2rem', background: 'none', border: 'none', color: 'var(--primary)', cursor: 'pointer', fontSize: '0.875rem' }}>
+                      <Plus size={16} /> Add Acquirer
+                    </button>
+                  </div>
+                  {commissionFormData.acquirers.map((acq, index) => (
+                    <div key={`acq-${index}`} style={{ display: 'flex', gap: '1rem', alignItems: 'center', marginBottom: '0.5rem' }}>
+                      <select
+                        value={acq.member}
+                        onChange={(e) => updateAcquirer(index, 'member', e.target.value)}
+                        required
+                        style={{ flex: 1 }}
+                      >
+                        <option value="" disabled>Select Acquirer</option>
+                        {teamMembers.map((member) => (
+                          <option key={member} value={member}>{member}</option>
+                        ))}
+                      </select>
+                      <input
+                        type="number"
+                        placeholder="Amount (₹)"
+                        value={acq.amount}
+                        onChange={(e) => updateAcquirer(index, 'amount', e.target.value)}
+                        required
+                        style={{ width: '150px' }}
+                      />
+                      {commissionFormData.acquirers.length > 1 && (
+                        <button type="button" onClick={() => removeAcquirer(index)} style={{ background: 'none', border: 'none', color: 'var(--danger)', cursor: 'pointer' }}>
+                          <Trash2 size={18} />
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+
+                <div className="form-group full-width">
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                    <label>Workers <span className="required">*</span></label>
+                    <button type="button" onClick={addWorker} style={{ display: 'flex', alignItems: 'center', gap: '0.2rem', background: 'none', border: 'none', color: 'var(--primary)', cursor: 'pointer', fontSize: '0.875rem' }}>
+                      <Plus size={16} /> Add Worker
+                    </button>
+                  </div>
+                  {commissionFormData.workers.map((worker, index) => (
+                    <div key={`work-${index}`} style={{ display: 'flex', gap: '1rem', alignItems: 'center', marginBottom: '0.5rem' }}>
+                      <select
+                        value={worker.member}
+                        onChange={(e) => updateWorker(index, 'member', e.target.value)}
+                        required
+                        style={{ flex: 1 }}
+                      >
+                        <option value="" disabled>Select Worker</option>
+                        {teamMembers.map((member) => (
+                          <option key={member} value={member}>{member}</option>
+                        ))}
+                      </select>
+                      <input
+                        type="number"
+                        placeholder="Amount (₹)"
+                        value={worker.amount}
+                        onChange={(e) => updateWorker(index, 'amount', e.target.value)}
+                        required
+                        style={{ width: '150px' }}
+                      />
+                      {commissionFormData.workers.length > 1 && (
+                        <button type="button" onClick={() => removeWorker(index)} style={{ background: 'none', border: 'none', color: 'var(--danger)', cursor: 'pointer' }}>
+                          <Trash2 size={18} />
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+                <div className="form-group">
+                  <label htmlFor="commDate">Date</label>
+                  <input
+                    type="date"
+                    id="commDate"
+                    value={commissionFormData.date}
+                    onChange={(e) => setCommissionFormData({ ...commissionFormData, date: e.target.value })}
+                  />
+                </div>
+                <div className="form-group full-width">
+                  <label htmlFor="commNotes">Notes</label>
+                  <textarea
+                    id="commNotes"
+                    value={commissionFormData.notes}
+                    onChange={(e) => setCommissionFormData({ ...commissionFormData, notes: e.target.value })}
+                    placeholder="Optional notes or context..."
+                    rows="2"
+                  />
+                </div>
+              </div>
+              <div className="form-actions">
+                <button type="button" className="cancel-btn" onClick={() => setShowCommissionModal(false)}>Cancel</button>
+                <button type="submit" className="submit-btn">{editingCommission ? 'Update Split' : 'Save Split'}</button>
               </div>
             </form>
           </div>
